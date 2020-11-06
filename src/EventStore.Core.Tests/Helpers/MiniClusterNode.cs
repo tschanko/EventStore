@@ -261,6 +261,7 @@ namespace EventStore.Core.Tests.Helpers {
 			ICheckpoint writerChk;
 			ICheckpoint chaserChk;
 			ICheckpoint epochChk;
+			ICheckpoint epochNumberChk;
 			ICheckpoint truncateChk;
 			ICheckpoint replicationCheckpoint = new InMemoryCheckpoint(-1);
 			ICheckpoint indexCheckpoint = new InMemoryCheckpoint(-1);
@@ -268,6 +269,7 @@ namespace EventStore.Core.Tests.Helpers {
 				writerChk = new InMemoryCheckpoint(Checkpoint.Writer);
 				chaserChk = new InMemoryCheckpoint(Checkpoint.Chaser);
 				epochChk = new InMemoryCheckpoint(Checkpoint.Epoch, initValue: -1);
+				epochNumberChk = new InMemoryCheckpoint(Checkpoint.EpochNumber, initValue: -1);
 				truncateChk = new InMemoryCheckpoint(Checkpoint.Truncate, initValue: -1);
 			} else {
 				var writerCheckFilename = Path.Combine(dbPath, Checkpoint.Writer + ".chk");
@@ -278,13 +280,27 @@ namespace EventStore.Core.Tests.Helpers {
 				chaserChk = new MemoryMappedFileCheckpoint(chaserCheckFilename, Checkpoint.Chaser, cached: true);
 				epochChk = new MemoryMappedFileCheckpoint(
 					epochCheckFilename, Checkpoint.Epoch, cached: true, initValue: -1);
+				epochNumberChk = new MemoryMappedFileCheckpoint(
+					epochCheckFilename, Checkpoint.EpochNumber, cached: true, initValue: -1);
 				truncateChk = new MemoryMappedFileCheckpoint(
 					truncateCheckFilename, Checkpoint.Truncate, cached: true, initValue: -1);
 			}
 
 			var nodeConfig = new TFChunkDbConfig(
-				dbPath, new VersionedPatternFileNamingStrategy(dbPath, "chunk-"), chunkSize, chunksCacheSize, writerChk,
-				chaserChk, epochChk, truncateChk, replicationCheckpoint, indexCheckpoint, Constants.TFChunkInitialReaderCountDefault, Constants.TFChunkMaxReaderCountDefault, inMemDb);
+				dbPath, 
+				new VersionedPatternFileNamingStrategy(dbPath, "chunk-"), 
+				chunkSize, 
+				chunksCacheSize, 
+				writerChk,
+				chaserChk, 
+				epochChk, 
+				epochNumberChk, 
+				truncateChk, 
+				replicationCheckpoint, 
+				indexCheckpoint, 
+				Constants.TFChunkInitialReaderCountDefault, 
+				Constants.TFChunkMaxReaderCountDefault, 
+				inMemDb);
 			return nodeConfig;
 		}
 	}

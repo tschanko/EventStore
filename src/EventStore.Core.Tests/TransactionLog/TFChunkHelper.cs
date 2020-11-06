@@ -9,7 +9,10 @@ namespace EventStore.Core.Tests.TransactionLog {
 	public static class TFChunkHelper {
 		public static TFChunkDbConfig CreateDbConfig(string pathName, long writerCheckpointPosition,
 			long chaserCheckpointPosition = 0,
-			long epochCheckpointPosition = -1, long truncateCheckpoint = -1, int chunkSize = 10000,
+			long epochCheckpointPosition = -1,
+			long epochNumberCheckpointPosition = -1,
+			long truncateCheckpoint = -1, 
+			int chunkSize = 10000,
 			long maxTruncation = -1) {
 			return new TFChunkDbConfig(pathName,
 				new VersionedPatternFileNamingStrategy(pathName, "chunk-"),
@@ -18,6 +21,7 @@ namespace EventStore.Core.Tests.TransactionLog {
 				new InMemoryCheckpoint(writerCheckpointPosition),
 				new InMemoryCheckpoint(chaserCheckpointPosition),
 				new InMemoryCheckpoint(epochCheckpointPosition),
+				new InMemoryCheckpoint(epochNumberCheckpointPosition),
 				new InMemoryCheckpoint(truncateCheckpoint),
 				new InMemoryCheckpoint(-1), 
 				new InMemoryCheckpoint(-1),
@@ -26,15 +30,21 @@ namespace EventStore.Core.Tests.TransactionLog {
 				maxTruncation: maxTruncation);
 		}
 
-		public static TFChunkDbConfig CreateDbConfig(string pathName, ICheckpoint writerCheckpoint,
-			ICheckpoint chaserCheckpoint, int chunkSize = 10000, ICheckpoint replicationCheckpoint = null) {
+		public static TFChunkDbConfig CreateDbConfig(
+			string pathName, 
+			ICheckpoint writerCheckpoint,
+			ICheckpoint chaserCheckpoint, 
+			int chunkSize = 10000, 
+			ICheckpoint replicationCheckpoint = null) {
 			if (replicationCheckpoint == null) replicationCheckpoint = new InMemoryCheckpoint(-1);
-			return new TFChunkDbConfig(pathName,
+			return new TFChunkDbConfig(
+				pathName,
 				new VersionedPatternFileNamingStrategy(pathName, "chunk-"),
 				chunkSize,
 				0,
 				writerCheckpoint,
 				chaserCheckpoint,
+				new InMemoryCheckpoint(-1),
 				new InMemoryCheckpoint(-1),
 				new InMemoryCheckpoint(-1),
 				replicationCheckpoint, 
