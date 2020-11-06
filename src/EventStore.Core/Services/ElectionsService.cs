@@ -52,6 +52,7 @@ namespace EventStore.Core.Services {
 		private readonly int _clusterSize;
 		private readonly ICheckpoint _writerCheckpoint;
 		private readonly ICheckpoint _chaserCheckpoint;
+		private readonly ICheckpoint _epochNumberCheckpoint;
 		private readonly IEpochManager _epochManager;
 		private readonly Func<long> _getLastCommitPosition;
 		private int _nodePriority;
@@ -82,6 +83,7 @@ namespace EventStore.Core.Services {
 			int clusterSize,
 			ICheckpoint writerCheckpoint,
 			ICheckpoint chaserCheckpoint,
+			ICheckpoint epochNumberCheckpoint,
 			IEpochManager epochManager,
 			Func<long> getLastCommitPosition,
 			int nodePriority,
@@ -91,6 +93,7 @@ namespace EventStore.Core.Services {
 			Ensure.Positive(clusterSize, nameof(clusterSize));
 			Ensure.NotNull(writerCheckpoint, nameof(writerCheckpoint));
 			Ensure.NotNull(chaserCheckpoint, nameof(chaserCheckpoint));
+			Ensure.NotNull(epochNumberCheckpoint, nameof(epochNumberCheckpoint));
 			Ensure.NotNull(epochManager, nameof(epochManager));
 			Ensure.NotNull(getLastCommitPosition, nameof(getLastCommitPosition));
 			Ensure.NotNull(timeProvider, nameof(timeProvider));
@@ -104,6 +107,7 @@ namespace EventStore.Core.Services {
 			_clusterSize = clusterSize;
 			_writerCheckpoint = writerCheckpoint;
 			_chaserCheckpoint = chaserCheckpoint;
+			_epochNumberCheckpoint = epochNumberCheckpoint;
 			_epochManager = epochManager;
 			_getLastCommitPosition = getLastCommitPosition;
 			_nodePriority = nodePriority;

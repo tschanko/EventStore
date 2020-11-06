@@ -54,6 +54,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 				clusterSettings.ClusterNodesCount,
 				new InMemoryCheckpoint(WriterCheckpoint),
 				new InMemoryCheckpoint(ChaserCheckpoint),
+				new InMemoryCheckpoint(ChaserCheckpoint),
 				new FakeEpochManager(),
 				() => -1, 0, new FakeTimeProvider());
 			ElectionsService.SubscribeMessages(_bus);
