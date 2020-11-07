@@ -10,7 +10,7 @@ namespace EventStore.Core.TransactionLog.Chunks {
 		public readonly ICheckpoint WriterCheckpoint;
 		public readonly ICheckpoint ChaserCheckpoint;
 		public readonly ICheckpoint EpochCheckpoint;
-		public readonly ICheckpoint EpochNumberCheckpoint;
+		public readonly ICheckpoint ProposedEpochCheckpoint;
 		public readonly ICheckpoint TruncateCheckpoint;
 		public readonly ICheckpoint ReplicationCheckpoint;
 		public readonly ICheckpoint IndexCheckpoint;
@@ -31,7 +31,7 @@ namespace EventStore.Core.TransactionLog.Chunks {
 			ICheckpoint writerCheckpoint,
 			ICheckpoint chaserCheckpoint,
 			ICheckpoint epochCheckpoint,
-			ICheckpoint epochNumberCheckpoint,
+			ICheckpoint proposedEpochCheckpoint,
 			ICheckpoint truncateCheckpoint,
 			ICheckpoint replicationCheckpoint,
 			ICheckpoint indexCheckpoint,
@@ -50,7 +50,7 @@ namespace EventStore.Core.TransactionLog.Chunks {
 			Ensure.NotNull(writerCheckpoint, "writerCheckpoint");
 			Ensure.NotNull(chaserCheckpoint, "chaserCheckpoint");
 			Ensure.NotNull(epochCheckpoint, "epochCheckpoint");
-			Ensure.NotNull(epochNumberCheckpoint, "epochNumberCheckpoint");
+			Ensure.NotNull(proposedEpochCheckpoint, "proposedEpochCheckpoint");
 			Ensure.NotNull(truncateCheckpoint, "truncateCheckpoint");
 			Ensure.NotNull(replicationCheckpoint, "replicationCheckpoint");
 			Ensure.NotNull(indexCheckpoint, "indexCheckpoint");
@@ -63,7 +63,7 @@ namespace EventStore.Core.TransactionLog.Chunks {
 			WriterCheckpoint = writerCheckpoint;
 			ChaserCheckpoint = chaserCheckpoint;
 			EpochCheckpoint = epochCheckpoint;
-			EpochNumberCheckpoint = epochNumberCheckpoint;
+			ProposedEpochCheckpoint = proposedEpochCheckpoint;
 			TruncateCheckpoint = truncateCheckpoint;
 			ReplicationCheckpoint = replicationCheckpoint;
 			IndexCheckpoint = indexCheckpoint;

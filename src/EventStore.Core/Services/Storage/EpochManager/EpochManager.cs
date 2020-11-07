@@ -7,6 +7,7 @@ using EventStore.Core.DataStructures;
 using EventStore.Core.TransactionLog;
 using EventStore.Core.TransactionLog.Checkpoint;
 using EventStore.Core.TransactionLog.LogRecords;
+using Microsoft.AspNetCore.Mvc.Filters;
 using ILogger = Serilog.ILogger;
 
 namespace EventStore.Core.Services.Storage.EpochManager {
@@ -185,7 +186,7 @@ namespace EventStore.Core.Services.Storage.EpochManager {
 		}
 
 		// This method should be called from single thread.
-		public void WriteNewEpoch(int? epochNumber = null) {
+		public void WriteNewEpoch(int? proposedEpoch = null) {
 			// Set epoch checkpoint to -1, so if we crash after new epoch record was written, 
 			// but epoch checkpoint wasn't updated, on restart we don't miss the latest epoch.
 			// So on node start, if there is no epoch checkpoint or it contains negative position, 
@@ -203,7 +204,11 @@ namespace EventStore.Core.Services.Storage.EpochManager {
 			// and update EpochManager's state, by adjusting cache of records, epoch count and un-caching 
 			// excessive record, if present.
 			// If we are writing the very first epoch, last position will be -1.
-			var epoch = WriteEpochRecordWithRetry( epochNumber ?? _lastEpochNumber + 1, Guid.NewGuid(), _lastEpochPosition, _instanceId);
+			var epochNumber = _lastEpochNumber + 1;
+			if ((proposedEpoch ?? 0) > epochNumber) {
+				epochNumber = proposedEpoch ?? 0;
+			}
+			var epoch = WriteEpochRecordWithRetry( epochNumber, Guid.NewGuid(), _lastEpochPosition, _instanceId);
 			UpdateLastEpoch(epoch, flushWriter: true);
 		}
 

@@ -741,7 +741,7 @@ namespace EventStore.Core {
 					vNodeSettings.ClusterNodeCount,
 					db.Config.WriterCheckpoint, 
 					db.Config.ChaserCheckpoint,
-					db.Config.EpochNumberCheckpoint,
+					db.Config.ProposedEpochCheckpoint,
 					epochManager,
 					() => readIndex.LastIndexedPosition, 
 					vNodeSettings.NodePriority,

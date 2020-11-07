@@ -53,7 +53,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 				MemberInfoFromVNode(_node, _timeProvider.UtcNow, VNodeState.Unknown, true, 0, _epochId, 0), 3,
 				new InMemoryCheckpoint(0),
 				new InMemoryCheckpoint(0),
-				new InMemoryCheckpoint(0),
+				new InMemoryCheckpoint(-1),
 				new FakeEpochManager(), () => 0L, 0, _timeProvider);
 			_sut.SubscribeMessages(_bus);
 		}
@@ -275,7 +275,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 		public void should_send_view_change_proof_to_other_members() {
 			_sut.Handle(new ElectionMessage.StartElections());
 			_sut.Handle(new ElectionMessage.ViewChange(_nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, 0));
-			_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, 0, 0,
+			_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, 0, 0,0,
 				_epochId, Guid.Empty, 0, 0, 0, 0, new ClusterInfo()));
 			var proposalHttpMessage = _publisher.Messages.OfType<GrpcMessage.SendOverGrpc>()
 				.FirstOrDefault(x => x.Message is ElectionMessage.Proposal);
@@ -544,7 +544,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 			var expected = new Message[] {
 				new GrpcMessage.SendOverGrpc(_nodeTwo.HttpEndPoint,
 					new ElectionMessage.PrepareOk(0,
-						_node.InstanceId, _node.HttpEndPoint, -1, -1, Guid.Empty, Guid.Empty, 0, 0, 0, 0, _clusterInfo),
+						_node.InstanceId, _node.HttpEndPoint, 0, -1, -1, Guid.Empty, Guid.Empty, 0, 0, 0, 0, _clusterInfo),
 					_timeProvider.LocalTime.Add(Core.Services.ElectionsService.LeaderElectionGrpcRequestTimeout),
 					_timeProvider.LocalTime.Add(Core.Services.ElectionsService.LeaderElectionProgressTimeout)),
 			};
@@ -568,7 +568,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 			_publisher.Messages.Clear();
 			_sut.Handle(new SystemMessage.BecomeShuttingDown(Guid.NewGuid(), false, false));
 
-			_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, 0, 0,
+			_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint,0, 0, 0,
 				_epochId, Guid.Empty, 0, 0, 0, 0, new ClusterInfo()));
 
 			Assert.IsEmpty(_publisher.Messages);
@@ -586,7 +586,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 
 		[Test]
 		public void should_ignore_prepare_ok() {
-			_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, 0, 0,
+			_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint,0, 0, 0,
 				_epochId, Guid.Empty, 0, 0, 0, 0, new ClusterInfo()));
 
 			Assert.IsEmpty(_publisher.Messages);
@@ -606,7 +606,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 		public void should_ignore_prepare_ok() {
 			_sut.Handle(new ElectionMessage.StartElections());
 			_publisher.Messages.Clear();
-			_sut.Handle(new ElectionMessage.PrepareOk(-1, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, 0, 0,
+			_sut.Handle(new ElectionMessage.PrepareOk(-1, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, 0,0, 0,
 				_epochId, Guid.Empty, 0, 0, 0, 0, new ClusterInfo()));
 
 			Assert.IsEmpty(_publisher.Messages);
@@ -628,7 +628,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 			_sut.Handle(new ElectionMessage.ViewChange(_nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, 0));
 			_publisher.Messages.Clear();
 
-			_sut.Handle(new ElectionMessage.PrepareOk(0, _node.InstanceId, _node.HttpEndPoint, 0, 0,
+			_sut.Handle(new ElectionMessage.PrepareOk(0, _node.InstanceId, _node.HttpEndPoint, 0,0, 0,
 				_epochId, Guid.Empty, 0, 0, 0, 0, new ClusterInfo()));
 
 			Assert.IsEmpty(_publisher.Messages);
@@ -650,7 +650,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 			_sut.Handle(new ElectionMessage.ViewChange(_nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, 0));
 			_publisher.Messages.Clear();
 
-			_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, 0, 0,
+			_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, 0,0, 0,
 				_epochId, Guid.Empty, 0, 0, 0, 0, new ClusterInfo()));
 
 			var proposalHttpMessage = _publisher.Messages.OfType<GrpcMessage.SendOverGrpc>()
@@ -661,13 +661,13 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 				new GrpcMessage.SendOverGrpc(_nodeTwo.HttpEndPoint,
 					new ElectionMessage.Proposal(_node.InstanceId, _node.HttpEndPoint,
 						proposalMessage.LeaderId,
-						proposalMessage.LeaderHttpEndPoint, 0, 0, 0, _epochId, Guid.Empty, 0, 0, 0, 0),
+						proposalMessage.LeaderHttpEndPoint, 0,0, 0, 0, _epochId, Guid.Empty, 0, 0, 0, 0),
 					_timeProvider.LocalTime.Add(Core.Services.ElectionsService.LeaderElectionGrpcRequestTimeout),
 					_timeProvider.LocalTime.Add(Core.Services.ElectionsService.LeaderElectionProgressTimeout)),
 				new GrpcMessage.SendOverGrpc(_nodeThree.HttpEndPoint,
 					new ElectionMessage.Proposal(_node.InstanceId, _node.HttpEndPoint,
 						proposalMessage.LeaderId,
-						proposalMessage.LeaderHttpEndPoint, 0, 0, 0, _epochId, Guid.Empty, 0, 0, 0, 0),
+						proposalMessage.LeaderHttpEndPoint, 0,0, 0, 0, _epochId, Guid.Empty, 0, 0, 0, 0),
 					_timeProvider.LocalTime.Add(Core.Services.ElectionsService.LeaderElectionGrpcRequestTimeout),
 					_timeProvider.LocalTime.Add(Core.Services.ElectionsService.LeaderElectionProgressTimeout))
 			};
@@ -689,7 +689,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 			_sut.Handle(new SystemMessage.BecomeShuttingDown(Guid.NewGuid(), false, false));
 			_sut.Handle(new ElectionMessage.Proposal(_node.InstanceId, _node.HttpEndPoint,
 				_node.InstanceId,
-				_node.HttpEndPoint, 0, 0, 0, _epochId, Guid.Empty, 0, 0, 0, 0));
+				_node.HttpEndPoint, 0,0, 0, 0, _epochId, Guid.Empty, 0, 0, 0, 0));
 
 			Assert.IsEmpty(_publisher.Messages);
 		}
@@ -708,7 +708,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 		public void should_ignore_proposal() {
 			_sut.Handle(new ElectionMessage.Proposal(_node.InstanceId, _node.HttpEndPoint,
 				_node.InstanceId,
-				_node.HttpEndPoint, 0, 0, 0, _epochId, Guid.Empty, 0, 0, 0, 0));
+				_node.HttpEndPoint, 0, 0,0, 0, _epochId, Guid.Empty, 0, 0, 0, 0));
 
 			Assert.IsEmpty(_publisher.Messages,
 				"Nodes do not send proposals to themselves, they accept their own proposal implicitly.");
@@ -728,12 +728,12 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 		public void should_ignore_proposal() {
 			_sut.Handle(new ElectionMessage.StartElections());
 			_sut.Handle(new ElectionMessage.ViewChange(_nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, 0));
-			_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, 0, 0,
+			_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint,0,0, 0,
 				_epochId, Guid.Empty, 0, 0, 0, 0, new ClusterInfo()));
 			_publisher.Messages.Clear();
 			_sut.Handle(new ElectionMessage.Proposal(_nodeTwo.InstanceId, _nodeTwo.HttpEndPoint,
 				_node.InstanceId,
-				_node.HttpEndPoint, 0, 0, 0, _epochId, Guid.Empty, 0, 0, 0, 0));
+				_node.HttpEndPoint, 0, 0,0, 0, _epochId, Guid.Empty, 0, 0, 0, 0));
 
 			Assert.IsEmpty(_publisher.Messages);
 		}
@@ -756,7 +756,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 			_publisher.Messages.Clear();
 			_sut.Handle(new ElectionMessage.Proposal(_nodeTwo.InstanceId, _nodeTwo.HttpEndPoint,
 				_node.InstanceId,
-				_node.HttpEndPoint, 1, 0, 0, _epochId, Guid.Empty, 0, 0, 0, 0));
+				_node.HttpEndPoint, 1, 0,0, 0, _epochId, Guid.Empty, 0, 0, 0, 0));
 
 			Assert.IsEmpty(_publisher.Messages);
 		}
@@ -779,7 +779,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 			_publisher.Messages.Clear();
 			_sut.Handle(new ElectionMessage.Proposal(Guid.NewGuid(), new IPEndPoint(IPAddress.Loopback, 4),
 				_node.InstanceId,
-				_node.HttpEndPoint, 0, 0, 0, _epochId, Guid.Empty, 0, 0, 0, 0));
+				_node.HttpEndPoint, 0, 0,0, 0, _epochId, Guid.Empty, 0, 0, 0, 0));
 
 			Assert.IsEmpty(_publisher.Messages);
 		}
@@ -802,7 +802,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 			_publisher.Messages.Clear();
 			_sut.Handle(new ElectionMessage.Proposal(_nodeTwo.InstanceId, _nodeTwo.HttpEndPoint,
 				Guid.NewGuid(),
-				new IPEndPoint(IPAddress.Loopback, 4), 0, 0, 0, _epochId, Guid.Empty, 0, 0, 0, 0));
+				new IPEndPoint(IPAddress.Loopback, 4), 0,0, 0, 0, _epochId, Guid.Empty, 0, 0, 0, 0));
 
 			Assert.IsEmpty(_publisher.Messages);
 		}
@@ -825,7 +825,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 			_publisher.Messages.Clear();
 			_sut.Handle(new ElectionMessage.Proposal(_nodeTwo.InstanceId, _nodeTwo.HttpEndPoint,
 				_nodeThree.InstanceId,
-				_nodeThree.HttpEndPoint, 0, 0, 0, _epochId, Guid.Empty, 0, 0, 0, 0));
+				_nodeThree.HttpEndPoint, 0,0, 0, 0, _epochId, Guid.Empty, 0, 0, 0, 0));
 
 			var expected = new Message[] {
 				new ElectionMessage.ElectionsDone(0,
@@ -884,7 +884,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 		public void should_ignore_accept() {
 			_sut.Handle(new ElectionMessage.StartElections());
 			_sut.Handle(new ElectionMessage.ViewChange(_nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, 0));
-			_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, 0, 0,
+			_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint,0, 0, 0,
 				_epochId, Guid.Empty, 0, 0, 0, 0, new ClusterInfo()));
 			_publisher.Messages.Clear();
 
@@ -934,7 +934,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 			_sut.Handle(new ElectionMessage.Prepare(_nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, 0));
 			_sut.Handle(new ElectionMessage.Proposal(_nodeTwo.InstanceId, _nodeTwo.HttpEndPoint,
 				Guid.NewGuid(),
-				new IPEndPoint(IPAddress.Loopback, 4), 0, 0, 0, _epochId, Guid.Empty, 0, 0, 0, 0));
+				new IPEndPoint(IPAddress.Loopback, 4), 0,0, 0, 0, _epochId, Guid.Empty, 0, 0, 0, 0));
 			_publisher.Messages.Clear();
 
 			_sut.Handle(new ElectionMessage.Accept(_nodeTwo.InstanceId, _nodeTwo.HttpEndPoint,
@@ -957,7 +957,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 		public void should_complete_elections() {
 			_sut.Handle(new ElectionMessage.StartElections());
 			_sut.Handle(new ElectionMessage.ViewChange(_nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, 0));
-			_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, 0, 0,
+			_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, 0, 0,0,
 				_epochId, Guid.Empty, 0, 0, 0, 0, new ClusterInfo()));
 			var proposalHttpMessage = _publisher.Messages.OfType<GrpcMessage.SendOverGrpc>()
 				.FirstOrDefault(x => x.Message is ElectionMessage.Proposal);
@@ -993,7 +993,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 		public void should_ignore_timeout() {
 			_sut.Handle(new ElectionMessage.StartElections());
 			_sut.Handle(new ElectionMessage.ViewChange(_nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, 0));
-			_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, 0, 0,
+			_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint,0, 0, 0,
 				_epochId, Guid.Empty, 0, 0, 0, 0, new ClusterInfo()));
 			var proposalHttpMessage = _publisher.Messages.OfType<GrpcMessage.SendOverGrpc>()
 				.FirstOrDefault(x => x.Message is ElectionMessage.Proposal);
@@ -1041,7 +1041,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 		public void should_ignore_resign_node_message() {
 			_sut.Handle(new ElectionMessage.StartElections());
 			_sut.Handle(new ElectionMessage.ViewChange(_nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, 0));
-			_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, 0, 0,
+			_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, 0,0, 0,
 				_epochId, Guid.Empty, 0, 0, 0, 0, new ClusterInfo()));
 			var proposalHttpMessage = _publisher.Messages.OfType<GrpcMessage.SendOverGrpc>()
 				.FirstOrDefault(x => x.Message is ElectionMessage.Proposal);
@@ -1068,7 +1068,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 		public void should_initiate_leader_resignation_and_inform_other_nodes() {
 			_sut.Handle(new ElectionMessage.StartElections());
 			_sut.Handle(new ElectionMessage.ViewChange(_nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, 0));
-			_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, -1, 0,
+			_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, 0,-1, 0,
 				_epochId, Guid.Empty, -1, -1, -1, -1, new ClusterInfo()));
 			_sut.Handle(new ElectionMessage.Accept(_nodeTwo.InstanceId, _nodeTwo.HttpEndPoint,
 				_node.InstanceId, _node.HttpEndPoint, 0));
@@ -1128,7 +1128,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 		public void should_initiate_leader_resignation() {
 			_sut.Handle(new ElectionMessage.StartElections());
 			_sut.Handle(new ElectionMessage.ViewChange(_nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, 0));
-			_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, -1, 0,
+			_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint,0, -1, 0,
 				_epochId, Guid.Empty, -1, -1, -1, -1, new ClusterInfo()));
 			_sut.Handle(new ElectionMessage.Accept(_nodeTwo.InstanceId, _nodeTwo.HttpEndPoint,
 				_node.InstanceId, _node.HttpEndPoint, 0));
@@ -1161,7 +1161,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 		public void should_attempt_not_to_elect_previously_elected_leader() {
 			_sut.Handle(new ElectionMessage.StartElections());
 			_sut.Handle(new ElectionMessage.ViewChange(_nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, 0));
-			_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, -1, 0,
+			_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint,0, -1, 0,
 				_epochId, Guid.Empty, -1, -1, -1, -1, new ClusterInfo()));
 			_sut.Handle(new ElectionMessage.Accept(_nodeTwo.InstanceId, _nodeTwo.HttpEndPoint,
 				_node.InstanceId, _node.HttpEndPoint, 0));
@@ -1177,7 +1177,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 
 			_sut.Handle(new ElectionMessage.StartElections());
 			_sut.Handle(new ElectionMessage.ViewChange(_nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, 3));
-			_sut.Handle(new ElectionMessage.PrepareOk(3, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, 0, 0,
+			_sut.Handle(new ElectionMessage.PrepareOk(3, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint,0, 0, 0,
 				_epochId, Guid.Empty, 0, 0, 0, 0, new ClusterInfo()));
 			var proposalHttpMessage = _publisher.Messages.OfType<GrpcMessage.SendOverGrpc>()
 				.FirstOrDefault(x => x.Message is ElectionMessage.Proposal);
@@ -1215,7 +1215,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 			_sut.Handle(new ElectionMessage.ViewChange(_nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, 3));
 			_publisher.Messages.Clear();
 
-			_sut.Handle(new ElectionMessage.PrepareOk(3, _nodeThree.InstanceId, _nodeThree.HttpEndPoint, 0, 0,
+			_sut.Handle(new ElectionMessage.PrepareOk(3, _nodeThree.InstanceId, _nodeThree.HttpEndPoint,0, 0, 0,
 				_epochId, Guid.Empty, 0, 0, 0, 0, new ClusterInfo()));
 
 			Assert.NotNull(_publisher.Messages.OfType<GrpcMessage.SendOverGrpc>().FirstOrDefault());
@@ -1240,7 +1240,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 				new Core.Services.ElectionsService(new FakePublisher(), nodeInfo, 3,
 					new InMemoryCheckpoint(0),
 					new InMemoryCheckpoint(0),
-					new InMemoryCheckpoint(0),
+					new InMemoryCheckpoint(-1),
 					new FakeEpochManager(), () => 0L, 0, new FakeTimeProvider());
 			});
 		}
@@ -1257,7 +1257,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 			_sut.Handle(new ElectionMessage.StartElections());
 			_sut.Handle(new ElectionMessage.ViewChange(_nodeThree.InstanceId, _nodeThree.HttpEndPoint, 0));
 
-			_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeThree.InstanceId, _nodeThree.HttpEndPoint, 10, 0,
+			_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeThree.InstanceId, _nodeThree.HttpEndPoint,0, 10, 0,
 				_epochId, _nodeThree.InstanceId, 0, 0, 0, 0, new ClusterInfo()));
 
 			_publisher.Messages.Clear();
@@ -1301,7 +1301,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 				when_electing_a_leader_and_prepare_ok_is_not_received_from_previous_leader_in_epoch_record {
 
 			public and_previous_leader_is_present_and_alive_in_cluster_info_in_received_prepare_ok() {
-				_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, 10, 0,
+				_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint,0, 10, 0,
 					_epochId, _nodeThree.InstanceId, 0, 0, 0, 0,
 					new ClusterInfo(
 						MemberInfoFromVNode(_nodeThree, _timeProvider.UtcNow, VNodeState.Unknown, true, 0, _epochId, 0)
@@ -1321,7 +1321,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 				when_electing_a_leader_and_prepare_ok_is_not_received_from_previous_leader_in_epoch_record {
 
 			public and_previous_leader_is_present_and_alive_but_has_lower_priority_in_cluster_info_in_received_prepare_ok() {
-				_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, 10, 0,
+				_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint,0, 10, 0,
 					_epochId, _nodeThree.InstanceId, 0, 0, 0, 0,
 					new ClusterInfo(
 						MemberInfoFromVNode(_nodeThree, _timeProvider.UtcNow, VNodeState.Unknown, true, 0, _epochId, -1)
@@ -1343,7 +1343,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 			public and_previous_leader_is_present_and_alive_in_cluster_info_in_received_prepare_ok_but_is_resigning() {
 				_sut.Handle(new ElectionMessage.LeaderIsResigning(_nodeThree.InstanceId, _nodeThree.HttpEndPoint));
 
-				_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, 10, 0,
+				_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint,0, 10, 0,
 					_epochId, _nodeThree.InstanceId, 0, 0, 0, 0,
 					new ClusterInfo(
 						MemberInfoFromVNode(_nodeThree, _timeProvider.UtcNow, VNodeState.Unknown, true, 0, _epochId, 0)
@@ -1376,7 +1376,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 				when_electing_a_leader_and_prepare_ok_is_not_received_from_previous_leader_in_epoch_record {
 
 			public and_previous_leader_is_present_and_alive_in_cluster_info_in_received_prepare_ok_and_epoch_number_matches_but_not_epoch_id() {
-				_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, 10, 0,
+				_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint,0, 10, 0,
 					_epochId, _nodeThree.InstanceId, 0, 0, 0, 0,
 					new ClusterInfo(
 						MemberInfoFromVNode(_nodeThree, _timeProvider.UtcNow, VNodeState.Unknown, true, 10, Guid.NewGuid(), 0)
@@ -1410,7 +1410,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 			private Guid _otherEpochId = Guid.NewGuid();
 
 			public and_previous_leader_is_present_and_alive_in_cluster_info_in_received_prepare_ok_and_epoch_number_does_not_match() {
-				_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, 10, 0,
+				_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, 0,10, 0,
 					_epochId, _nodeThree.InstanceId, 0, 0, 0, 0,
 					new ClusterInfo(
 						MemberInfoFromVNode(_nodeThree, _timeProvider.UtcNow, VNodeState.Unknown, true, 9, _otherEpochId , 0)
@@ -1430,7 +1430,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 				when_electing_a_leader_and_prepare_ok_is_not_received_from_previous_leader_in_epoch_record {
 
 			public and_previous_leader_is_not_present_in_cluster_info_in_received_prepare_ok() {
-				_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, 10, 0,
+				_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint,0, 10, 0,
 					_epochId, _nodeThree.InstanceId, 0, 0, 0, 0, new ClusterInfo()));
 
 				_publisher.Messages.Clear();
@@ -1460,7 +1460,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 				when_electing_a_leader_and_prepare_ok_is_not_received_from_previous_leader_in_epoch_record {
 
 			public and_previous_leader_is_present_but_dead_in_cluster_info_in_received_prepare_ok() {
-				_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, 10, 0,
+				_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeTwo.InstanceId, _nodeTwo.HttpEndPoint, 0,10, 0,
 					_epochId, _nodeThree.InstanceId, 0, 0, 0, 0,
 					new ClusterInfo(
 						MemberInfoFromVNode(_nodeThree, _timeProvider.UtcNow, VNodeState.Unknown, false, 0, _epochId, 0)
@@ -1501,7 +1501,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 			_sut.Handle(new ElectionMessage.StartElections());
 			_sut.Handle(new ElectionMessage.ViewChange(_nodeThree.InstanceId, _nodeThree.HttpEndPoint, 0));
 
-			_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeThree.InstanceId, _nodeThree.HttpEndPoint, 10, 0,
+			_sut.Handle(new ElectionMessage.PrepareOk(0, _nodeThree.InstanceId, _nodeThree.HttpEndPoint,0, 10, 0,
 				_epochId, _nodeThree.InstanceId, 0, 0, 0, 0, new ClusterInfo()));
 
 			_publisher.Messages.Clear();

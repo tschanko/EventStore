@@ -11,6 +11,7 @@ using EventStore.Core.Messaging;
 using EventStore.Core.Services.Storage.EpochManager;
 using EventStore.Core.Services.TimerService;
 using EventStore.Core.TransactionLog.Checkpoint;
+using Microsoft.AspNetCore.Authentication;
 using ILogger = Serilog.ILogger;
 
 namespace EventStore.Core.Services {
@@ -52,7 +53,7 @@ namespace EventStore.Core.Services {
 		private readonly int _clusterSize;
 		private readonly ICheckpoint _writerCheckpoint;
 		private readonly ICheckpoint _chaserCheckpoint;
-		private readonly ICheckpoint _epochNumberCheckpoint;
+		private readonly ICheckpoint _proposedEpoch;
 		private readonly IEpochManager _epochManager;
 		private readonly Func<long> _getLastCommitPosition;
 		private int _nodePriority;
@@ -83,7 +84,7 @@ namespace EventStore.Core.Services {
 			int clusterSize,
 			ICheckpoint writerCheckpoint,
 			ICheckpoint chaserCheckpoint,
-			ICheckpoint epochNumberCheckpoint,
+			ICheckpoint proposedEpoch,
 			IEpochManager epochManager,
 			Func<long> getLastCommitPosition,
 			int nodePriority,
@@ -93,7 +94,7 @@ namespace EventStore.Core.Services {
 			Ensure.Positive(clusterSize, nameof(clusterSize));
 			Ensure.NotNull(writerCheckpoint, nameof(writerCheckpoint));
 			Ensure.NotNull(chaserCheckpoint, nameof(chaserCheckpoint));
-			Ensure.NotNull(epochNumberCheckpoint, nameof(epochNumberCheckpoint));
+			Ensure.NotNull(proposedEpoch, nameof(proposedEpoch));
 			Ensure.NotNull(epochManager, nameof(epochManager));
 			Ensure.NotNull(getLastCommitPosition, nameof(getLastCommitPosition));
 			Ensure.NotNull(timeProvider, nameof(timeProvider));
@@ -107,7 +108,7 @@ namespace EventStore.Core.Services {
 			_clusterSize = clusterSize;
 			_writerCheckpoint = writerCheckpoint;
 			_chaserCheckpoint = chaserCheckpoint;
-			_epochNumberCheckpoint = epochNumberCheckpoint;
+			_proposedEpoch = proposedEpoch;
 			_epochManager = epochManager;
 			_getLastCommitPosition = getLastCommitPosition;
 			_nodePriority = nodePriority;
@@ -124,7 +125,7 @@ namespace EventStore.Core.Services {
 					memberInfo.HttpEndPoint,
 					memberInfo.AdvertiseHostToClientAs, memberInfo.AdvertiseHttpPortToClientAs, memberInfo.AdvertiseTcpPortToClientAs,
 					ownInfo.LastCommitPosition, ownInfo.WriterCheckpoint, ownInfo.ChaserCheckpoint,
-					ownInfo.EpochPosition, ownInfo.EpochNumber, ownInfo.EpochId, ownInfo.NodePriority,
+					ownInfo.LastEpochPosition, ownInfo.LastEpochNumber, ownInfo.LastEpochId, ownInfo.NodePriority,
 					memberInfo.IsReadOnlyReplica)
 			};
 		}
@@ -234,8 +235,11 @@ namespace EventStore.Core.Services {
 			// we are still on the same view, but we selected leader
 			if (_state != ElectionsState.ElectingLeader && _leader != null) return;
 
-			Log.Information("ELECTIONS: (V={view}) TIMED OUT! (S={state}, M={leader}).", message.View, _state, _leader);
-			ShiftToLeaderElection(_lastAttemptedView + 1);
+			Log.Information("ELECTIONS: (V={view} PE={epoch}) TIMED OUT! (S={state}, M={leader}).", message.View, _proposedEpoch.Read(), _state, _leader);
+			//ShiftToLeaderElection(_lastAttemptedView + 1);
+			_proposedEpoch.Write(_proposedEpoch.Read() +1);
+			_proposedEpoch.Flush();
+
 		}
 
 		private void ShiftToLeaderElection(int view) {
@@ -362,8 +366,8 @@ namespace EventStore.Core.Services {
 		private ElectionMessage.PrepareOk CreatePrepareOk(int view) {
 			var ownInfo = GetOwnInfo();
 			var clusterInfo = new ClusterInfo(_servers);
-			return new ElectionMessage.PrepareOk(view, ownInfo.InstanceId, ownInfo.HttpEndPoint,
-				ownInfo.EpochNumber, ownInfo.EpochPosition, ownInfo.EpochId, ownInfo.EpochLeaderInstanceId,
+			return new ElectionMessage.PrepareOk(view, ownInfo.InstanceId, ownInfo.HttpEndPoint,ownInfo.ProposedEpochNumber,
+				ownInfo.LastEpochNumber, ownInfo.LastEpochPosition, ownInfo.LastEpochId, ownInfo.LastEpochLeaderInstanceId,
 				ownInfo.LastCommitPosition, ownInfo.WriterCheckpoint, ownInfo.ChaserCheckpoint,
 				ownInfo.NodePriority, clusterInfo);
 		}
@@ -383,7 +387,7 @@ namespace EventStore.Core.Services {
 			Log.Information("ELECTIONS: (V={view}) PREPARE_OK FROM {nodeInfo}.", msg.View,
 				FormatNodeInfo(msg.ServerHttpEndPoint, msg.ServerId,
 					msg.LastCommitPosition, msg.WriterCheckpoint, msg.ChaserCheckpoint,
-					msg.EpochNumber, msg.EpochPosition, msg.EpochId, msg.EpochLeaderInstanceId, msg.NodePriority));
+					msg.LastEpochNumber, msg.LastEpochPosition, msg.LastEpochId, msg.LastEpochLeaderInstanceId, msg.NodePriority));
 
 			if (!_prepareOkReceived.ContainsKey(msg.ServerId)) {
 				_prepareOkReceived.Add(msg.ServerId, msg);
@@ -393,17 +397,14 @@ namespace EventStore.Core.Services {
 		}
 
 		private void ShiftToLeader() {
-			Log.Information("ELECTIONS: (V={lastAttemptedView}) SHIFT TO REG_LEADER.", _lastAttemptedView);
+			Log.Information("ELECTIONS: (V={lastAttemptedView} PE={proposedEpoch}) SHIFT TO REG_LEADER.", _lastAttemptedView, _proposedEpoch.Read());
 
 			_state = ElectionsState.Leader;
-			SendProposal();
-		}
-
-		private void SendProposal() {
+		
 			_acceptsReceived.Clear();
 			_leaderProposal = null;
-
-			var leader = GetBestLeaderCandidate(_prepareOkReceived, _servers, _resigningLeaderInstanceId, _lastAttemptedView);
+			
+			var leader = GetBestLeaderCandidate(_prepareOkReceived, _servers, _resigningLeaderInstanceId, _lastAttemptedView, _proposedEpoch);
 			if (leader == null) {
 				Log.Information("ELECTIONS: (V={lastAttemptedView}) NO LEADER CANDIDATE WHEN TRYING TO SEND PROPOSAL.",
 					_lastAttemptedView);
@@ -414,21 +415,29 @@ namespace EventStore.Core.Services {
 
 			Log.Information("ELECTIONS: (V={lastAttemptedView}) SENDING PROPOSAL CANDIDATE: {formatNodeInfo}, ME: {ownInfo}.",
 				_lastAttemptedView, FormatNodeInfo(leader), FormatNodeInfo(GetOwnInfo()));
-
+			
 			var proposal = new ElectionMessage.Proposal(_memberInfo.InstanceId, _memberInfo.HttpEndPoint,
 				leader.InstanceId, leader.HttpEndPoint,
-				_lastInstalledView,
-				leader.EpochNumber, leader.EpochPosition, leader.EpochId, leader.EpochLeaderInstanceId,
+				_lastInstalledView, leader.ProposedEpochNumber,
+				leader.LastEpochNumber, leader.LastEpochPosition, leader.LastEpochId, leader.LastEpochLeaderInstanceId,
 				leader.LastCommitPosition, leader.WriterCheckpoint, leader.ChaserCheckpoint, leader.NodePriority);
 			Handle(new ElectionMessage.Accept(_memberInfo.InstanceId, _memberInfo.HttpEndPoint,
 				leader.InstanceId, leader.HttpEndPoint, _lastInstalledView));
 			SendToAllExceptMe(proposal);
 		}
 
-		public static LeaderCandidate GetBestLeaderCandidate(Dictionary<Guid, ElectionMessage.PrepareOk> received,
-			MemberInfo[] servers, Guid? resigningLeaderInstanceId, int lastAttemptedView) {
+		public static LeaderCandidate GetBestLeaderCandidate(
+			Dictionary<Guid, ElectionMessage.PrepareOk> received,
+			MemberInfo[] servers, 
+			Guid? resigningLeaderInstanceId, 
+			int lastAttemptedView,
+			ICheckpoint proposedEpoch) {
+			// we're the election leader 
+			// this will determine which of the nodes we know about would be the best candidate to propose as cluster leader
+			
 			var best = received.Values
-				.OrderByDescending(x => x.EpochNumber)
+				.OrderByDescending(x => x.ProposedEpochNumber)
+				.ThenByDescending(x => x.LastEpochNumber)
 				.ThenByDescending(x => x.LastCommitPosition)
 				.ThenByDescending(x => x.WriterCheckpoint)
 				.ThenByDescending(x => x.ChaserCheckpoint)
@@ -437,12 +446,16 @@ namespace EventStore.Core.Services {
 				.FirstOrDefault();
 			if (best == null)
 				return null;
+			if (best.ProposedEpochNumber > proposedEpoch.Read()) {
+				proposedEpoch.Write(best.ProposedEpochNumber);
+				proposedEpoch.Flush();
+			}
 
-			var bestCandidate = new LeaderCandidate(best.ServerId, best.ServerHttpEndPoint,
-				best.EpochNumber, best.EpochPosition, best.EpochId, best.EpochLeaderInstanceId,
+			var bestCandidate = new LeaderCandidate(best.ServerId, best.ServerHttpEndPoint, (int)proposedEpoch.Read(),
+				best.LastEpochNumber, best.LastEpochPosition, best.LastEpochId, best.LastEpochLeaderInstanceId,
 				best.LastCommitPosition, best.WriterCheckpoint, best.ChaserCheckpoint, best.NodePriority);
 
-			if (best.EpochLeaderInstanceId != Guid.Empty) {
+			if (best.LastEpochLeaderInstanceId != Guid.Empty) {
 				//best.EpochLeaderInstanceId = id of the last leader/master which has been able to write an epoch record to the transaction log and get it replicated
 				//to the "best" node which has the latest data, i.e data that has been replicated to at least a quorum number of nodes for sure.
 				//We know that the data from the "best" node originates from this leader/master itself from this epoch record onwards, thus it implies that
@@ -452,20 +465,20 @@ namespace EventStore.Core.Services {
 				//NOTE 2: it is not necessary that this leader/master is the last elected leader/master in the cluster e.g a leader/master might be elected but
 				//has no time to replicate the epoch. In this case, it will need to truncate when joining the new leader.
 
-				var previousLeaderId = best.EpochLeaderInstanceId;
+				var previousLeaderId = best.LastEpochLeaderInstanceId;
 				LeaderCandidate previousLeaderCandidate = null;
 
 				//we have received a PrepareOk message from the previous leader, so we definitely know it's alive.
 				if (received.TryGetValue(previousLeaderId, out var leaderMsg) &&
-					leaderMsg.EpochNumber == best.EpochNumber &&
-					leaderMsg.EpochId == best.EpochId) {
+					leaderMsg.LastEpochNumber == best.LastEpochNumber &&
+					leaderMsg.LastEpochId == best.LastEpochId) {
 					Log.Debug("ELECTIONS: (V={lastAttemptedView}) Previous Leader (L={previousLeaderId:B}) from last epoch record is still alive.", lastAttemptedView, previousLeaderId);
-					previousLeaderCandidate = new LeaderCandidate(leaderMsg.ServerId, leaderMsg.ServerHttpEndPoint,
-						leaderMsg.EpochNumber, leaderMsg.EpochPosition, leaderMsg.EpochId, leaderMsg.EpochLeaderInstanceId,
+					previousLeaderCandidate = new LeaderCandidate(leaderMsg.ServerId, leaderMsg.ServerHttpEndPoint, (int)proposedEpoch.Read(),
+						leaderMsg.LastEpochNumber, leaderMsg.LastEpochPosition, leaderMsg.LastEpochId, leaderMsg.LastEpochLeaderInstanceId,
 						leaderMsg.LastCommitPosition, leaderMsg.WriterCheckpoint, leaderMsg.ChaserCheckpoint,
 						leaderMsg.NodePriority);
 				}
-
+				
 				//we try to find at least one node from the quorum no. of PrepareOk messages which says that the previous leader is alive
 				//if none of them say it's alive, a quorum can very probably not be formed with the previous leader
 				//otherwise we know that the leader was alive during the last gossip time interval and we try our luck
@@ -475,21 +488,21 @@ namespace EventStore.Core.Services {
 
 						if (member != null) {
 							//these checks are not really necessary but we do them to ensure that everything is normal.
-							if (best.EpochNumber == member.EpochNumber && best.EpochId != member.EpochId) {
+							if (best.LastEpochNumber == member.EpochNumber && best.LastEpochId != member.EpochId) {
 								//something is definitely not right if the epoch numbers match but not the epoch ids
-								Log.Warning("ELECTIONS: (V={lastAttemptedView}) Epoch ID mismatch in gossip information from node {nodeId:B}. Best node's Epoch Id: {bestEpochId:B}, Leader node's Epoch Id: {leaderEpochId:B}", lastAttemptedView, id, best.EpochId, member.EpochId);
+								Log.Warning("ELECTIONS: (V={lastAttemptedView}) Epoch ID mismatch in gossip information from node {nodeId:B}. Best node's Epoch Id: {bestEpochId:B}, Leader node's Epoch Id: {leaderEpochId:B}", lastAttemptedView, id, best.LastEpochId, member.EpochId);
 								continue;
 							}
 
-							if (best.EpochNumber - member.EpochNumber > 2) {
+							if (best.LastEpochNumber - member.EpochNumber > 2) {
 								//gossip information may be slightly out of date. We log a warning if the epoch number is off by more than 2
-								Log.Warning("ELECTIONS: (V={lastAttemptedView}) Epoch number is off by more than two in gossip information from node {nodeId:B}. Best node's Epoch number: {bestEpochNumber}, Leader node's Epoch number: {leaderEpochNumber}.", lastAttemptedView, id, best.EpochNumber, member.EpochNumber);
+								Log.Warning("ELECTIONS: (V={lastAttemptedView}) Epoch number is off by more than two in gossip information from node {nodeId:B}. Best node's Epoch number: {bestEpochNumber}, Leader node's Epoch number: {leaderEpochNumber}.", lastAttemptedView, id, best.LastEpochNumber, member.EpochNumber);
 							}
-
+							
 							Log.Debug("ELECTIONS: (V={lastAttemptedView}) Previous Leader (L={previousLeaderId:B}) from last epoch record is still alive according to gossip from node {nodeId:B}.", lastAttemptedView, previousLeaderId, id);
 							previousLeaderCandidate = new LeaderCandidate(member.InstanceId,
-								member.HttpEndPoint,
-								member.EpochNumber, member.EpochPosition, member.EpochId, best.EpochLeaderInstanceId,
+								member.HttpEndPoint, (int)proposedEpoch.Read(),
+								member.EpochNumber, member.EpochPosition, member.EpochId, best.LastEpochLeaderInstanceId,
 								member.LastCommitPosition, member.WriterCheckpoint, member.ChaserCheckpoint,
 								member.NodePriority);
 							break;
@@ -519,8 +532,8 @@ namespace EventStore.Core.Services {
 
 			if (leader != null && leader.InstanceId != resigningLeader) {
 				if (candidate.InstanceId == leader.InstanceId
-				    || candidate.EpochNumber > leader.EpochNumber
-				    || (candidate.EpochNumber == leader.EpochNumber && candidate.EpochId != leader.EpochId))
+				    || candidate.LastEpochNumber > leader.EpochNumber
+				    || (candidate.LastEpochNumber == leader.EpochNumber && candidate.LastEpochId != leader.EpochId))
 					return true;
 
 				Log.Information(
@@ -546,8 +559,8 @@ namespace EventStore.Core.Services {
 		}
 
 		private static bool IsCandidateGoodEnough(LeaderCandidate candidate, LeaderCandidate ownInfo) {
-			if (candidate.EpochNumber != ownInfo.EpochNumber)
-				return candidate.EpochNumber > ownInfo.EpochNumber;
+			if (candidate.LastEpochNumber != ownInfo.LastEpochNumber)
+				return candidate.LastEpochNumber > ownInfo.LastEpochNumber;
 			if (candidate.LastCommitPosition != ownInfo.LastCommitPosition)
 				return candidate.LastCommitPosition > ownInfo.LastCommitPosition;
 			if (candidate.WriterCheckpoint != ownInfo.WriterCheckpoint)
@@ -565,8 +578,8 @@ namespace EventStore.Core.Services {
 			if (_servers.All(x => x.InstanceId != message.ServerId)) return;
 			if (_servers.All(x => x.InstanceId != message.LeaderId)) return;
 
-			var candidate = new LeaderCandidate(message.LeaderId, message.LeaderHttpEndPoint,
-				message.EpochNumber, message.EpochPosition, message.EpochId, message.EpochLeaderInstanceId,
+			var candidate = new LeaderCandidate(message.LeaderId, message.LeaderHttpEndPoint,message.ProposedEpochNumber,
+				message.LastEpochNumber, message.LastEpochPosition, message.LastEpochId, message.LastEpochLeaderInstanceId,
 				message.LastCommitPosition, message.WriterCheckpoint, message.ChaserCheckpoint, message.NodePriority);
 
 			var ownInfo = GetOwnInfo();
@@ -635,21 +648,28 @@ namespace EventStore.Core.Services {
 
 		private LeaderCandidate GetOwnInfo() {
 			var lastEpoch = _epochManager.GetLastEpoch();
+			var lastEpochNumber = lastEpoch?.EpochNumber ?? -1;
+			var proposedEpoch = Math.Max(lastEpochNumber, (int)_proposedEpoch.Read()) + 1;
+			_proposedEpoch.Write(proposedEpoch);
+			_proposedEpoch.Flush();
 			var writerCheckpoint = _writerCheckpoint.Read();
 			var chaserCheckpoint = _chaserCheckpoint.Read();
 			var lastCommitPosition = _getLastCommitPosition();
-			return new LeaderCandidate(_memberInfo.InstanceId, _memberInfo.HttpEndPoint,
-				lastEpoch == null ? -1 : lastEpoch.EpochNumber,
-				lastEpoch == null ? -1 : lastEpoch.EpochPosition,
-				lastEpoch == null ? Guid.Empty : lastEpoch.EpochId,
-				lastEpoch == null ? Guid.Empty : lastEpoch.LeaderInstanceId,
+			return new LeaderCandidate(
+				_memberInfo.InstanceId, 
+				_memberInfo.HttpEndPoint,
+				proposedEpoch,
+				lastEpochNumber,
+				lastEpoch?.EpochPosition ?? -1,
+				lastEpoch?.EpochId ?? Guid.Empty,
+				lastEpoch?.LeaderInstanceId ?? Guid.Empty,
 				lastCommitPosition, writerCheckpoint, chaserCheckpoint, _nodePriority);
 		}
 		
 		private static string FormatNodeInfo(LeaderCandidate candidate) {
 			return FormatNodeInfo(candidate.HttpEndPoint, candidate.InstanceId,
 				candidate.LastCommitPosition, candidate.WriterCheckpoint, candidate.ChaserCheckpoint,
-				candidate.EpochNumber, candidate.EpochPosition, candidate.EpochId, candidate.EpochLeaderInstanceId, candidate.NodePriority);
+				candidate.LastEpochNumber, candidate.LastEpochPosition, candidate.LastEpochId, candidate.LastEpochLeaderInstanceId, candidate.NodePriority);
 		}
 
 		private static string FormatNodeInfo(EndPoint serverEndPoint, Guid serverId,
@@ -665,10 +685,11 @@ namespace EventStore.Core.Services {
 			public readonly Guid InstanceId;
 			public readonly EndPoint HttpEndPoint;
 
-			public readonly int EpochNumber;
-			public readonly long EpochPosition;
-			public readonly Guid EpochId;
-			public readonly Guid EpochLeaderInstanceId;
+			public readonly int ProposedEpochNumber;
+			public readonly int LastEpochNumber;
+			public readonly long LastEpochPosition;
+			public readonly Guid LastEpochId;
+			public readonly Guid LastEpochLeaderInstanceId;
 
 			public readonly long LastCommitPosition;
 			public readonly long WriterCheckpoint;
@@ -676,16 +697,25 @@ namespace EventStore.Core.Services {
 
 			public readonly int NodePriority;
 
-			public LeaderCandidate(Guid instanceId, EndPoint httpEndPoint,
-				int epochNumber, long epochPosition, Guid epochId, Guid epochLeaderInstanceId,
-				long lastCommitPosition, long writerCheckpoint, long chaserCheckpoint,
+			public LeaderCandidate(
+				Guid instanceId, 
+				EndPoint httpEndPoint,
+				int proposedEpochNumber,
+				int lastEpochNumber, 
+				long lastEpochPosition, 
+				Guid lastEpochId, 
+				Guid lastEpochLeaderInstanceId,
+				long lastCommitPosition, 
+				long writerCheckpoint, 
+				long chaserCheckpoint,
 				int nodePriority) {
 				InstanceId = instanceId;
 				HttpEndPoint = httpEndPoint;
-				EpochNumber = epochNumber;
-				EpochPosition = epochPosition;
-				EpochId = epochId;
-				EpochLeaderInstanceId = epochLeaderInstanceId;
+				ProposedEpochNumber = proposedEpochNumber;
+				LastEpochNumber = lastEpochNumber;
+				LastEpochPosition = lastEpochPosition;
+				LastEpochId = lastEpochId;
+				LastEpochLeaderInstanceId = lastEpochLeaderInstanceId;
 				LastCommitPosition = lastCommitPosition;
 				WriterCheckpoint = writerCheckpoint;
 				ChaserCheckpoint = chaserCheckpoint;

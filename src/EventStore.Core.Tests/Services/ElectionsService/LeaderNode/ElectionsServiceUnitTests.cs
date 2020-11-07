@@ -44,7 +44,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 
 				var writerCheckpoint = new InMemoryCheckpoint();
 				var readerCheckpoint = new InMemoryCheckpoint();
-				var epochNumberCheckpoint = new InMemoryCheckpoint();
+				var proposedEpochCheckpoint = new InMemoryCheckpoint(-1);
 				var epochManager = new FakeEpochManager();
 				Func<long> lastCommitPosition = () => -1;
 				var electionsService = new Core.Services.ElectionsService(outputBus,
@@ -52,7 +52,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 					3,
 					writerCheckpoint,
 					readerCheckpoint,
-					epochNumberCheckpoint,
+					proposedEpochCheckpoint,
 					epochManager,
 					() => -1, 0, new FakeTimeProvider());
 				electionsService.SubscribeMessages(inputBus);
@@ -258,7 +258,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 			var resigningLeadership = tc.ResigningLeader.HasValue
 				? (Guid?)IdForNode(tc.ResigningLeader.Value)
 				: null;
-			var mc = SUT.GetBestLeaderCandidate(prepareOks, members, resigningLeadership, 0);
+			var mc = SUT.GetBestLeaderCandidate(prepareOks, members, resigningLeadership, 0, new InMemoryCheckpoint(1));
 
 			Assert.AreEqual(IdForNode(tc.ExpectedLeaderCandidateNode), mc.InstanceId);
 
@@ -282,7 +282,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 			ClusterInfo clusterInfo) {
 			var id = IdForNode(i);
 			var ep = EndpointForNode(i);
-			return new ElectionMessage.PrepareOk(1, id, ep, 1, 1, epochId, previousLeaderId, lastCommitPosition(i), writerCheckpoint(i),
+			return new ElectionMessage.PrepareOk(1, id, ep, 1,1, 1, epochId, previousLeaderId, lastCommitPosition(i), writerCheckpoint(i),
 				chaserCheckpoint(i), nodePriority(i), clusterInfo);
 		}
 
@@ -294,7 +294,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 			Guid previousLeaderId) {
 			var id = IdForNode(i);
 			var ep = EndpointForNode(i);
-			return new SUT.LeaderCandidate(id, ep, 1, 1, epochId, previousLeaderId, lastCommitPosition(i), writerCheckpoint(i),
+			return new SUT.LeaderCandidate(id, ep, 1, 1,1, epochId, previousLeaderId, lastCommitPosition(i), writerCheckpoint(i),
 				chaserCheckpoint(i), nodePriority(i));
 		}
 
@@ -329,6 +329,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 			public long[] WriterCheckpoints { get; set; } = {1L, 1, 1};
 			public long[] ChaserCheckpoints { get; set; } = {1L, 1, 1};
 			public int[] NodePriorities { get; set; } = {1, 1, 1};
+			
 
 			private static string GenerateName(int expectedLeaderCandidateNode, long[] commitPositions,
 				long[] writerCheckpoints,

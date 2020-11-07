@@ -89,10 +89,10 @@ namespace EventStore.Core.Messages {
 
 				View = message.View;
 
-				EpochNumber = message.EpochNumber;
-				EpochPosition = message.EpochPosition;
-				EpochId = message.EpochId;
-				EpochLeaderInstanceId = message.EpochLeaderInstanceId;
+				EpochNumber = message.LastEpochNumber;
+				EpochPosition = message.LastEpochPosition;
+				EpochId = message.LastEpochId;
+				EpochLeaderInstanceId = message.LastEpochLeaderInstanceId;
 				LastCommitPosition = message.LastCommitPosition;
 				WriterCheckpoint = message.WriterCheckpoint;
 				ChaserCheckpoint = message.ChaserCheckpoint;
@@ -136,10 +136,10 @@ namespace EventStore.Core.Messages {
 				LeaderHttpPort = message.LeaderHttpEndPoint.GetPort();
 
 				View = message.View;
-				EpochNumber = message.EpochNumber;
-				EpochPosition = message.EpochPosition;
-				EpochId = message.EpochId;
-				EpochLeaderInstanceId = message.EpochLeaderInstanceId;
+				EpochNumber = message.LastEpochNumber;
+				EpochPosition = message.LastEpochPosition;
+				EpochId = message.LastEpochId;
+				EpochLeaderInstanceId = message.LastEpochLeaderInstanceId;
 				LastCommitPosition = message.LastCommitPosition;
 				WriterCheckpoint = message.WriterCheckpoint;
 				ChaserCheckpoint = message.ChaserCheckpoint;

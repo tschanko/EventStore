@@ -70,14 +70,19 @@ namespace EventStore.Core.Services.Transport.Grpc.Cluster {
 			if (!await _authorizationProvider.CheckAccessAsync(user, PrepareOkOperation, context.CancellationToken).ConfigureAwait(false)) {
 				throw AccessDenied();
 			}
+			//if received from a 20.6 node or earlier proposed epoch might not be set, use and increment last epoch
+			var proposedEpoch = Math.Max(request.LastEpochNumber, request.ProposedEpochNumber);
+			if (proposedEpoch == request.LastEpochNumber) { proposedEpoch++;}
+
 			_bus.Publish(new ElectionMessage.PrepareOk(
 				request.View,
 				Uuid.FromDto(request.ServerId).ToGuid(),
 				new DnsEndPoint(request.ServerHttp.Address, (int)request.ServerHttp.Port),
-				request.EpochNumber,
-				request.EpochPosition,
-				Uuid.FromDto(request.EpochId).ToGuid(),
-				Uuid.FromDto(request.EpochLeaderInstanceId).ToGuid(),
+				proposedEpoch,
+				request.LastEpochNumber,
+				request.LastEpochPosition,
+				Uuid.FromDto(request.LastEpochId).ToGuid(),
+				Uuid.FromDto(request.LastEpochLeaderInstanceId).ToGuid(),
 				request.LastCommitPosition,
 				request.WriterCheckpoint,
 				request.ChaserCheckpoint,
@@ -91,16 +96,20 @@ namespace EventStore.Core.Services.Transport.Grpc.Cluster {
 			if (!await _authorizationProvider.CheckAccessAsync(user, ProposalOperation, context.CancellationToken).ConfigureAwait(false)) {
 				throw AccessDenied();
 			}
+			//if received from a 20.6 node or earlier proposed epoch might not be set, use and increment last epoch
+			var proposedEpoch = Math.Max(request.LastEpochNumber, request.ProposedEpochNumber);
+			if (proposedEpoch == request.LastEpochNumber) { proposedEpoch++;}
 			_bus.Publish(new ElectionMessage.Proposal(
 				Uuid.FromDto(request.ServerId).ToGuid(),
 				new DnsEndPoint(request.ServerHttp.Address, (int)request.ServerHttp.Port),
 				Uuid.FromDto(request.LeaderId).ToGuid(),
 				new DnsEndPoint(request.LeaderHttp.Address, (int)request.LeaderHttp.Port),
 				request.View,
-				request.EpochNumber,
-				request.EpochPosition,
-				Uuid.FromDto(request.EpochId).ToGuid(),
-				Uuid.FromDto(request.EpochLeaderInstanceId).ToGuid(),
+				proposedEpoch,
+				request.LastEpochNumber,
+				request.LastEpochPosition,
+				Uuid.FromDto(request.LastEpochId).ToGuid(),
+				Uuid.FromDto(request.LastEpochLeaderInstanceId).ToGuid(),
 				request.LastCommitPosition,
 				request.WriterCheckpoint,
 				request.ChaserCheckpoint,
