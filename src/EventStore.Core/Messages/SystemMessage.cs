@@ -73,12 +73,17 @@ namespace EventStore.Core.Messages {
 
 		public class WriteEpoch : Message {
 			private static readonly int TypeId = Interlocked.Increment(ref NextMsgId);
-
 			public override int MsgTypeId {
 				get { return TypeId; }
 			}
+			public readonly int EpochNumber;
+			public WriteEpoch(int epochNumber) {
+				EpochNumber = epochNumber;
+			}
+
+
 		}
-		
+
 		public class InitiateLeaderResignation : Message {
 			private static readonly int TypeId = Interlocked.Increment(ref NextMsgId);
 
@@ -86,7 +91,7 @@ namespace EventStore.Core.Messages {
 				get { return TypeId; }
 			}
 		}
-		
+
 		public class RequestQueueDrained : Message {
 			private static readonly int TypeId = Interlocked.Increment(ref NextMsgId);
 
@@ -269,7 +274,7 @@ namespace EventStore.Core.Messages {
 				get { return TypeId; }
 			}
 
-			public BecomeReadOnlyLeaderless (Guid correlationId)
+			public BecomeReadOnlyLeaderless(Guid correlationId)
 				: base(correlationId, VNodeState.ReadOnlyLeaderless) {
 			}
 		}
@@ -334,7 +339,7 @@ namespace EventStore.Core.Messages {
 			public readonly Guid ConnectionId;
 			public readonly Guid? SubscriptionId;
 
-			public VNodeConnectionLost(EndPoint vNodeEndPoint, Guid connectionId, Guid? subscriptionId=null) {
+			public VNodeConnectionLost(EndPoint vNodeEndPoint, Guid connectionId, Guid? subscriptionId = null) {
 				Ensure.NotNull(vNodeEndPoint, "vNodeEndPoint");
 				Ensure.NotEmptyGuid(connectionId, "connectionId");
 

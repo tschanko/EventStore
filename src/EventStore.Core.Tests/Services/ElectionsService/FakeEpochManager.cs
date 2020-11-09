@@ -53,8 +53,10 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 		public bool IsCorrectEpochAt(long epochPosition, int epochNumber, Guid epochId) {
 			throw new NotImplementedException();
 		}
-
-		public void WriteNewEpoch() {
+		public void WriteNextEpoch() {
+			throw new NotImplementedException();
+		}
+		public void WriteNewEpoch(int epochNumber) {
 			throw new NotImplementedException();
 		}
 

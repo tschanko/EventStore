@@ -519,7 +519,7 @@ namespace EventStore.Core.Services.VNode {
 				//if the leader hasn't changed, we skip state changes through PreLeader or PreReplica
 				if (_leader.InstanceId == _nodeInfo.InstanceId && _state == VNodeState.Leader) {
 					//transitioning from leader to leader, we just write a new epoch
-					_fsm.Handle(new SystemMessage.WriteEpoch());
+					_fsm.Handle(new SystemMessage.WriteEpoch(message.ProposalNumber));
 				}
 
 				return;
