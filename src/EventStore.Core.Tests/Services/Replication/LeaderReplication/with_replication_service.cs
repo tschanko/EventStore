@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Net;
 using System.Threading.Tasks;
 using EventStore.Core.Authentication.InternalAuthentication;
 using EventStore.Core.Bus;
@@ -126,7 +125,7 @@ namespace EventStore.Core.Tests.Services.Replication.LeaderReplication {
 			ICheckpoint writerChk = new InMemoryCheckpoint(Checkpoint.Writer);
 			ICheckpoint chaserChk = new InMemoryCheckpoint(Checkpoint.Chaser);
 			ICheckpoint epochChk = new InMemoryCheckpoint(Checkpoint.Epoch, initValue: -1);
-			ICheckpoint epochNumberChk = new InMemoryCheckpoint(Checkpoint.EpochNumber, initValue: -1);
+			ICheckpoint proposalChk = new InMemoryCheckpoint(Checkpoint.Proposal, initValue: -1);
 			ICheckpoint truncateChk = new InMemoryCheckpoint(Checkpoint.Truncate, initValue: -1);
 			ICheckpoint replicationCheckpoint = new InMemoryCheckpoint(-1);
 			ICheckpoint indexCheckpoint = new InMemoryCheckpoint(-1);
@@ -138,7 +137,7 @@ namespace EventStore.Core.Tests.Services.Replication.LeaderReplication {
 				writerChk,
 				chaserChk,
 				epochChk,
-				epochNumberChk,
+				proposalChk,
 				truncateChk,
 				replicationCheckpoint,
 				indexCheckpoint,
