@@ -828,7 +828,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 				_nodeThree.HttpEndPoint, 0, 0, 0, _epochId, Guid.Empty, 0, 0, 0, 0));
 
 			var expected = new Message[] {
-				new ElectionMessage.ElectionsDone(0,
+				new ElectionMessage.ElectionsDone(0,0,
 					MemberInfo.ForVNode(
 						_nodeThree.InstanceId, _timeProvider.UtcNow, VNodeState.Unknown, true,
 						_nodeThree.InternalTcp,
@@ -968,7 +968,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 				proposalMessage.LeaderId, proposalMessage.LeaderHttpEndPoint, 0));
 
 			var expected = new Message[] {
-				new ElectionMessage.ElectionsDone(0,
+				new ElectionMessage.ElectionsDone(0,0,
 					MemberInfo.ForVNode(
 						_nodeTwo.InstanceId, _timeProvider.UtcNow, VNodeState.Unknown, true,
 						_nodeTwo.InternalTcp,
@@ -1187,7 +1187,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 				proposalMessage.LeaderId, proposalMessage.LeaderHttpEndPoint, 3));
 
 			var expected = new Message[] {
-				new ElectionMessage.ElectionsDone(3,
+				new ElectionMessage.ElectionsDone(3,0,
 					MemberInfo.ForVNode(
 						_nodeTwo.InstanceId, _timeProvider.UtcNow, VNodeState.Unknown, true,
 						_nodeTwo.InternalTcp,
@@ -1268,7 +1268,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 		[Test]
 		public void previous_leader_should_be_elected() {
 			var expected = new Message[] {
-				new ElectionMessage.ElectionsDone(0,
+				new ElectionMessage.ElectionsDone(0,0,
 					MemberInfo.ForVNode(
 						_nodeThree.InstanceId, _timeProvider.UtcNow, VNodeState.Unknown, true,
 						_nodeThree.InternalTcp,
@@ -1357,7 +1357,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 			[Test]
 			public void previous_leader_should_not_be_elected() {
 				var expected = new Message[] {
-					new ElectionMessage.ElectionsDone(0,
+					new ElectionMessage.ElectionsDone(0,0,
 						MemberInfo.ForVNode(
 							_nodeTwo.InstanceId, _timeProvider.UtcNow, VNodeState.Unknown, true,
 							_nodeTwo.InternalTcp,
@@ -1390,7 +1390,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 			[Test]
 			public void previous_leader_should_not_be_elected() {
 				var expected = new Message[] {
-					new ElectionMessage.ElectionsDone(0,
+					new ElectionMessage.ElectionsDone(0,0,
 						MemberInfo.ForVNode(
 							_nodeTwo.InstanceId, _timeProvider.UtcNow, VNodeState.Unknown, true,
 							_nodeTwo.InternalTcp,
@@ -1441,7 +1441,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 			[Test]
 			public void previous_leader_should_not_be_elected() {
 				var expected = new Message[] {
-					new ElectionMessage.ElectionsDone(0,
+					new ElectionMessage.ElectionsDone(0,0,
 						MemberInfo.ForVNode(
 							_nodeTwo.InstanceId, _timeProvider.UtcNow, VNodeState.Unknown, true,
 							_nodeTwo.InternalTcp,
@@ -1474,7 +1474,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 			[Test]
 			public void previous_leader_should_not_be_elected() {
 				var expected = new Message[] {
-					new ElectionMessage.ElectionsDone(0,
+					new ElectionMessage.ElectionsDone(0,0,
 						MemberInfo.ForVNode(
 							_nodeTwo.InstanceId, _timeProvider.UtcNow, VNodeState.Unknown, true,
 							_nodeTwo.InternalTcp,

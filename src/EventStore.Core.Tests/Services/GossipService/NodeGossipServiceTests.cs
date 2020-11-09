@@ -811,7 +811,7 @@ namespace EventStore.Core.Tests.Services.GossipService {
 			);
 
 		protected override Message When() =>
-			new ElectionMessage.ElectionsDone(0,
+			new ElectionMessage.ElectionsDone(0,0,
 				MemberInfoForVNode(_nodeTwo, _timeProvider.UtcNow, nodeState: VNodeState.Leader));
 
 		[Test]
