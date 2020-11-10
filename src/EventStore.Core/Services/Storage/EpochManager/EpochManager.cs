@@ -183,11 +183,7 @@ namespace EventStore.Core.Services.Storage.EpochManager {
 				_readers.Return(reader);
 			}
 		}
-
-		public void WriteNextEpoch() {
-			WriteNewEpoch(_lastEpochNumber + 1);
-		}
-
+		
 		// This method should be called from single thread.
 		public void WriteNewEpoch(int epochNumber) {
 			// Set epoch checkpoint to -1, so if we crash after new epoch record was written, 

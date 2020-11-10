@@ -135,7 +135,10 @@ namespace EventStore.Core.Messages {
 				get { return TypeId; }
 			}
 
-			public BecomeLeader(Guid correlationId) : base(correlationId, VNodeState.Leader) {
+			public readonly int EpochNumber;
+
+			public BecomeLeader(Guid correlationId, int epochNumber) : base(correlationId, VNodeState.Leader) {
+				EpochNumber = epochNumber;
 			}
 		}
 
