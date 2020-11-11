@@ -215,6 +215,9 @@ namespace EventStore.Core.Services.Storage.EpochManager {
 			if (epochNumber < 0) {
 				throw new ArgumentException($"Cannot add write Epoch with a negative Epoch Number {epochNumber}.",nameof(epochNumber));
 			}
+			if (epochNumber < LastEpochNumber) {
+				throw new ArgumentException($"Cannot add write Epoch with a Epoch Number {epochNumber} lower than Last Epoch Number {LastEpochNumber}.",nameof(epochNumber));
+			}
 			if (epochNumber <= LastEpochNumber) {
 				throw new Exception($"Concurrency failure, Last Epoch Number is {LastEpochNumber} cannot add write new Epoch with a lower Epoch Number {epochNumber}.");
 			}

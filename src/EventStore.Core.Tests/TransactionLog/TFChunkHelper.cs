@@ -7,10 +7,12 @@ using EventStore.Core.Util;
 
 namespace EventStore.Core.Tests.TransactionLog {
 	public static class TFChunkHelper {
-		public static TFChunkDbConfig CreateDbConfig(string pathName, long writerCheckpointPosition,
+		public static TFChunkDbConfig CreateDbConfig(
+			string pathName, 
+			long writerCheckpointPosition,
 			long chaserCheckpointPosition = 0,
 			long epochCheckpointPosition = -1,
-			long epochNumberCheckpointPosition = -1,
+			long proposalCheckpointPosition = -1,
 			long truncateCheckpoint = -1, 
 			int chunkSize = 10000,
 			long maxTruncation = -1) {
@@ -21,7 +23,7 @@ namespace EventStore.Core.Tests.TransactionLog {
 				new InMemoryCheckpoint(writerCheckpointPosition),
 				new InMemoryCheckpoint(chaserCheckpointPosition),
 				new InMemoryCheckpoint(epochCheckpointPosition),
-				new InMemoryCheckpoint(epochNumberCheckpointPosition),
+				new InMemoryCheckpoint(proposalCheckpointPosition),
 				new InMemoryCheckpoint(truncateCheckpoint),
 				new InMemoryCheckpoint(-1), 
 				new InMemoryCheckpoint(-1),
