@@ -213,7 +213,7 @@ namespace EventStore.Core.Services.Storage.EpochManager {
 			// excessive record, if present.
 			// If we are writing the very first epoch, last position will be -1.
 			if (epochNumber < 0) {
-				throw new Exception($"Concurrency failure, Cannot add write new Epoch with a negative Epoch Number {epochNumber}.");
+				throw new ArgumentException($"Cannot add write Epoch with a negative Epoch Number {epochNumber}.",nameof(epochNumber));
 			}
 			if (epochNumber <= LastEpochNumber) {
 				throw new Exception($"Concurrency failure, Last Epoch Number is {LastEpochNumber} cannot add write new Epoch with a lower Epoch Number {epochNumber}.");
