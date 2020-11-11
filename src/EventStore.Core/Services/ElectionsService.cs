@@ -434,13 +434,12 @@ namespace EventStore.Core.Services {
 					_lastAttemptedView);
 				return;
 			}
+
 			var proposalNumber = Math.Max(_epochManager.LastEpochNumber, _proposalCheckpoint.Read()) + 1;
 			_proposalCheckpoint.Write(proposalNumber);
 			_proposalCheckpoint.Flush();
 			leader.ProposalNumber = (int)proposalNumber;
 			_leaderProposal = leader;
-
-
 
 			Log.Information("ELECTIONS: (V={lastAttemptedView}) SENDING PROPOSAL CANDIDATE: {formatNodeInfo}, PROPOSAL NUMBER {proposal}, ME: {ownInfo}.",
 				_lastAttemptedView, FormatNodeInfo(leader), proposalNumber, FormatNodeInfo(GetOwnInfo()));
@@ -458,13 +457,14 @@ namespace EventStore.Core.Services {
 		public static LeaderCandidate GetBestLeaderCandidate(Dictionary<Guid, ElectionMessage.PrepareOk> received,
 			MemberInfo[] servers, Guid? resigningLeaderInstanceId, int lastAttemptedView) {
 			var best = received.Values
-				.OrderByDescending(x => x.EpochNumber)
-				.ThenByDescending(x => x.LastCommitPosition)
-				.ThenByDescending(x => x.WriterCheckpoint)
-				.ThenByDescending(x => x.ChaserCheckpoint)
-				.ThenByDescending(x => x.NodePriority)
-				.ThenByDescending(x => x.ServerId)
+				.OrderByDescending(x => x.EpochNumber) // latest election
+				.ThenByDescending(x => x.WriterCheckpoint) // log length (if not re-electing leader pick the most complete replica)
+				.ThenByDescending(x => x.NodePriority) // indicated node priority from settings
+				.ThenByDescending(x => x.ChaserCheckpoint) // in memory index position
+				.ThenByDescending(x => x.LastCommitPosition) // on disk index position
+				.ThenByDescending(x => x.ServerId) // tie breaker
 				.FirstOrDefault();
+
 			if (best == null)
 				return null;
 
