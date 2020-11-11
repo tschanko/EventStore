@@ -1187,7 +1187,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 				proposalMessage.LeaderId, proposalMessage.LeaderHttpEndPoint, 3));
 
 			var expected = new Message[] {
-				new ElectionMessage.ElectionsDone(3,0,
+				new ElectionMessage.ElectionsDone(3,1,
 					MemberInfo.ForVNode(
 						_nodeTwo.InstanceId, _timeProvider.UtcNow, VNodeState.Unknown, true,
 						_nodeTwo.InternalTcp,
