@@ -9,8 +9,7 @@ namespace EventStore.Core.Services.Storage.EpochManager {
 
 		EpochRecord GetLastEpoch();
 		EpochRecord[] GetLastEpochs(int maxCount);
-		EpochRecord GetEpoch(int epochNumber, bool throwIfNotFound);
-		EpochRecord GetEpochWithAllEpochs(int epochNumber, bool throwIfNotFound);
+		EpochRecord GetEpochAfter(int epochNumber, bool throwIfNotFound);
 		bool IsCorrectEpochAt(long epochPosition, int epochNumber, Guid epochId);
 		void WriteNewEpoch(int epochNumber);
 		void SetLastEpoch(EpochRecord epoch);
