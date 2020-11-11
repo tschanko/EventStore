@@ -222,7 +222,7 @@ namespace EventStore.Core.Services.Storage.EpochManager {
 				throw new Exception($"Concurrency failure, Last Epoch Number is {LastEpochNumber} cannot add write new Epoch with a lower Epoch Number {epochNumber}.");
 			}
 
-			var epoch = WriteEpochRecordWithRetry(epochNumber, Guid.NewGuid(), LastEpochNumber, _instanceId);
+			var epoch = WriteEpochRecordWithRetry(epochNumber, Guid.NewGuid(), _lastCachedEpoch?.Value.EpochPosition ?? -1, _instanceId);
 			UpdateLastEpoch(epoch, flushWriter: true);
 		}
 
