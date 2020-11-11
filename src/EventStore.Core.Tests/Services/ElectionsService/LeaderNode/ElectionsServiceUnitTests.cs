@@ -44,7 +44,7 @@ namespace EventStore.Core.Tests.Services.ElectionsService {
 
 				var writerCheckpoint = new InMemoryCheckpoint();
 				var readerCheckpoint = new InMemoryCheckpoint();
-				var proposalCheckpoint = new InMemoryCheckpoint();
+				var proposalCheckpoint = new InMemoryCheckpoint(-1);
 				var epochManager = new FakeEpochManager();
 				Func<long> lastCommitPosition = () => -1;
 				var electionsService = new Core.Services.ElectionsService(outputBus,
