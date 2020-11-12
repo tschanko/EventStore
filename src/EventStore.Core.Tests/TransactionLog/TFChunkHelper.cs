@@ -8,14 +8,26 @@ using EventStore.Core.Util;
 namespace EventStore.Core.Tests.TransactionLog {
 	public static class TFChunkHelper {
 		public static TFChunkDbConfig CreateDbConfig(
+			string pathName,
+			long writerCheckpointPosition) {
+			return CreateDbConfigEx(pathName, writerCheckpointPosition,0,-1,-1,-1,1000,-1);
+		}
+		public static TFChunkDbConfig CreateSizedDbConfig(
+			string pathName,
+			long writerCheckpointPosition,
+			int chunkSize) {
+			return CreateDbConfigEx(pathName, writerCheckpointPosition,0,-1,-1,-1,chunkSize,-1);
+		}
+		public static TFChunkDbConfig CreateDbConfigEx(
 			string pathName, 
 			long writerCheckpointPosition,
-			long chaserCheckpointPosition = 0,
-			long epochCheckpointPosition = -1,
-			long proposalCheckpointPosition = -1,
-			long truncateCheckpoint = -1, 
-			int chunkSize = 10000,
-			long maxTruncation = -1) {
+			long chaserCheckpointPosition,// Default 0
+			long epochCheckpointPosition ,// Default -1
+			long proposalCheckpointPosition ,// Default -1
+			long truncateCheckpoint ,// Default -1
+			int chunkSize ,// Default 10000
+			long maxTruncation // Default -1
+			) {
 			return new TFChunkDbConfig(pathName,
 				new VersionedPatternFileNamingStrategy(pathName, "chunk-"),
 				chunkSize,
