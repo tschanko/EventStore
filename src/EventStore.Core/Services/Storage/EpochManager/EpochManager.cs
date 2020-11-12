@@ -127,7 +127,7 @@ namespace EventStore.Core.Services.Storage.EpochManager {
 					return null;
 				throw new ArgumentOutOfRangeException(
 					nameof(epochNumber),
-					$"EpochNumber no epoch exist after Last Epoch {epochNumber}.");
+					$"EpochNumber no epochs exist after Last Epoch {epochNumber}.");
 			}
 
 			EpochRecord epoch;
@@ -156,10 +156,10 @@ namespace EventStore.Core.Services.Storage.EpochManager {
 							throw new Exception($"SystemLogRecord is not of Epoch sub-type: {result.LogRecord}.");
 
 						var nextEpoch = sysRec.GetEpochRecord();
-						if(nextEpoch.EpochNumber == epochNumber){ break;} //got it
-
+						if (nextEpoch.EpochNumber == epochNumber) {
+							return epoch; //got it
+						}
 						epoch = nextEpoch;
-
 					} while (epoch.PrevEpochPosition != -1 && epoch.EpochNumber < epochNumber);
 
 				} finally {
@@ -167,9 +167,8 @@ namespace EventStore.Core.Services.Storage.EpochManager {
 				}
 			}
 
-			if (epoch == null && throwIfNotFound) { throw new Exception($"Concurrency failure, epoch #{epochNumber} should not be null."); }
-
-			return epoch;
+			if (throwIfNotFound) { throw new Exception($"Concurrency failure, epoch #{epochNumber} should not be null."); }
+			return null;
 		}
 
 		public bool IsCorrectEpochAt(long epochPosition, int epochNumber, Guid epochId) {
