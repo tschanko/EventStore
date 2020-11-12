@@ -10,7 +10,7 @@ namespace EventStore.Core.Tests.TransactionLog {
 		public static TFChunkDbConfig CreateDbConfig(
 			string pathName,
 			long writerCheckpointPosition) {
-			return CreateDbConfigEx(pathName, writerCheckpointPosition,0,-1,-1,-1,1000,-1);
+			return CreateDbConfigEx(pathName, writerCheckpointPosition,0,-1,-1,-1,10000,-1);
 		}
 		public static TFChunkDbConfig CreateSizedDbConfig(
 			string pathName,
