@@ -113,7 +113,7 @@ namespace EventStore.Core.Services.Storage.EpochManager {
 			lock (_locker) {
 				var res = new List<EpochRecord>();
 				var node = _epochs.Last;
-				while (node != null & res.Count < maxCount) {
+				while (node != null && res.Count < maxCount) {
 					res.Add(node.Value);
 					node = node.Previous;
 				}
@@ -138,6 +138,9 @@ namespace EventStore.Core.Services.Storage.EpochManager {
 				}
 
 				epoch = epochNode?.Next?.Value;
+				if (epoch != null) {
+					return epoch;
+				}
 			}
 
 			if (epoch == null && _firstCachedEpoch?.Value != null && _firstCachedEpoch.Value.PrevEpochPosition != -1) {
@@ -277,7 +280,10 @@ namespace EventStore.Core.Services.Storage.EpochManager {
 				if (!_epochs.Contains(epoch)) {
 					_epochs.AddLast(epoch);
 					_lastCachedEpoch = _epochs.Last;
-					_epochs.RemoveFirst();
+					while (_epochs.Count > _cacheSize) {
+						_epochs.RemoveFirst();
+					}
+
 					_firstCachedEpoch = _epochs.First;
 
 					if (flushWriter)
