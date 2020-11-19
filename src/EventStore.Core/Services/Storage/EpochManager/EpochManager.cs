@@ -28,6 +28,7 @@ namespace EventStore.Core.Services.Storage.EpochManager {
 		private LinkedListNode<EpochRecord> _lastCachedEpoch;
 		public EpochRecord GetLastEpoch() => _lastCachedEpoch?.Value;
 		public int LastEpochNumber => _lastCachedEpoch?.Value.EpochNumber ?? -1;
+		public long LastEpochPosition => _lastCachedEpoch?.Value.EpochPosition ?? -1;
 		
 
 		public EpochManager(IPublisher bus,
@@ -224,7 +225,9 @@ namespace EventStore.Core.Services.Storage.EpochManager {
 			}
 			
 			var epoch = WriteEpochRecordWithRetry(epochNumber, Guid.NewGuid(), _lastCachedEpoch?.Value.EpochPosition ?? -1, _instanceId);
-			UpdateLastEpoch(epoch, flushWriter: true);
+			if (!UpdateLastEpoch(epoch, flushWriter: true)) {
+				throw new Exception($"Failed to update last epoch after writing a new epoch record (Epoch: {epoch}). This should never happen.");
+			}
 		}
 
 		private EpochRecord WriteEpochRecordWithRetry(int epochNumber, Guid epochId, long lastEpochPosition, Guid instanceId) {
@@ -253,8 +256,7 @@ namespace EventStore.Core.Services.Storage.EpochManager {
 			//if in follower/clone mode we should make sure the replicated epoch is in the manager cache
 			//this method is idempotent and safe to be called on the leader as well
 
-			if (epoch.EpochPosition > LastEpochNumber) {
-				UpdateLastEpoch(epoch, flushWriter: false);
+			if (UpdateLastEpoch(epoch, flushWriter: false)) {
 				return;
 			}
 
@@ -267,15 +269,17 @@ namespace EventStore.Core.Services.Storage.EpochManager {
 			}
 		}
 
-		private void UpdateLastEpoch(EpochRecord epoch, bool flushWriter) {
-			if (LastEpochNumber == epoch.EpochNumber) {
-				return;
-			}
-			if (LastEpochNumber > epoch.EpochNumber) {
-				throw new Exception($"Concurrency failure, Last Epoch Number is {LastEpochNumber} cannot add new Last Epoch with a lower Epoch Number {epoch.EpochNumber}.");
-			}
-
+		private bool UpdateLastEpoch(EpochRecord epoch, bool flushWriter) {
 			lock (_locker) {
+				if (epoch.EpochPosition <= LastEpochPosition) {
+					return false;
+				}
+
+				if (epoch.EpochNumber <= LastEpochNumber) {
+					throw new Exception($"Epoch numbers are not monotonically increasing: epoch.EpochPosition ({epoch.EpochPosition}) > LastEpochPosition ({LastEpochPosition}) " +
+					                    $"but epoch.EpochNumber ({epoch.EpochNumber}) <= LastEpochNumber ({LastEpochNumber})");
+				}
+
 				if (!_epochs.Contains(epoch)) {
 					_epochs.AddLast(epoch);
 					_lastCachedEpoch = _epochs.Last;
@@ -290,11 +294,13 @@ namespace EventStore.Core.Services.Storage.EpochManager {
 					_checkpoint.Write(epoch.EpochPosition);
 					_checkpoint.Flush();
 				}
-			}
-			Log.Debug(
-				"=== Update Last Epoch E{epochNumber}@{epochPosition}:{epochId:B} (previous epoch at {lastEpochPosition}) L={leaderId:B}.",
-				epoch.EpochNumber, epoch.EpochPosition, epoch.EpochId, epoch.PrevEpochPosition, epoch.LeaderInstanceId);
 
+				Log.Debug(
+					"=== Update Last Epoch E{epochNumber}@{epochPosition}:{epochId:B} (previous epoch at {lastEpochPosition}) L={leaderId:B}.",
+					epoch.EpochNumber, epoch.EpochPosition, epoch.EpochId, epoch.PrevEpochPosition, epoch.LeaderInstanceId);
+
+				return true;
+			}
 		}
 	}
 }
