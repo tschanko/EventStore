@@ -16,7 +16,7 @@ namespace EventStore.Core.TransactionLog.Chunks {
 		}
 
 		private readonly TFChunkDbConfig _config;
-		private readonly TFChunk.TFChunk[] _chunks = new TFChunk.TFChunk[MaxChunksCount];
+		private readonly TFChunk.ITFChunk[] _chunks = new TFChunk.ITFChunk[MaxChunksCount];
 		private volatile int _chunksCount;
 		private volatile bool _cachingEnabled;
 
@@ -88,7 +88,7 @@ namespace EventStore.Core.TransactionLog.Chunks {
 			}
 		}
 
-		public TFChunk.TFChunk CreateTempChunk(ChunkHeader chunkHeader, int fileSize) {
+		public TFChunk.ITFChunk CreateTempChunk(ChunkHeader chunkHeader, int fileSize) {
 			var chunkFileName = _config.FileNamingStrategy.GetTempFilename();
 			return TFChunk.TFChunk.CreateWithHeader(chunkFileName,
 				chunkHeader,
@@ -101,7 +101,7 @@ namespace EventStore.Core.TransactionLog.Chunks {
 				_config.ReduceFileCachePressure);
 		}
 
-		public TFChunk.TFChunk AddNewChunk() {
+		public TFChunk.ITFChunk AddNewChunk() {
 			lock (_chunksLocker) {
 				var chunkNumber = _chunksCount;
 				var chunkName = _config.FileNamingStrategy.GetFilenameFor(chunkNumber, 0);
@@ -121,7 +121,7 @@ namespace EventStore.Core.TransactionLog.Chunks {
 			}
 		}
 
-		public TFChunk.TFChunk AddNewChunk(ChunkHeader chunkHeader, int fileSize) {
+		public TFChunk.ITFChunk AddNewChunk(ChunkHeader chunkHeader, int fileSize) {
 			Ensure.NotNull(chunkHeader, "chunkHeader");
 			Ensure.Positive(fileSize, "fileSize");
 
@@ -146,7 +146,7 @@ namespace EventStore.Core.TransactionLog.Chunks {
 			}
 		}
 
-		public void AddChunk(TFChunk.TFChunk chunk) {
+		public void AddChunk(TFChunk.ITFChunk chunk) {
 			Ensure.NotNull(chunk, "chunk");
 
 			lock (_chunksLocker) {
@@ -160,7 +160,7 @@ namespace EventStore.Core.TransactionLog.Chunks {
 			}
 		}
 
-		public TFChunk.TFChunk SwitchChunk(TFChunk.TFChunk chunk, bool verifyHash,
+		public TFChunk.ITFChunk SwitchChunk(TFChunk.ITFChunk chunk, bool verifyHash,
 			bool removeChunksWithGreaterNumbers) {
 			Ensure.NotNull(chunk, "chunk");
 			if (!chunk.IsReadOnly)
@@ -171,7 +171,7 @@ namespace EventStore.Core.TransactionLog.Chunks {
 
 			Log.Information("Switching chunk #{chunkStartNumber}-{chunkEndNumber} ({oldFileName})...",
 				chunkHeader.ChunkStartNumber, chunkHeader.ChunkEndNumber, Path.GetFileName(oldFileName));
-			TFChunk.TFChunk newChunk;
+			TFChunk.ITFChunk newChunk;
 
 			if (_config.InMemDb)
 				newChunk = chunk;
@@ -220,7 +220,7 @@ namespace EventStore.Core.TransactionLog.Chunks {
 			}
 		}
 
-		private bool ReplaceChunksWith(TFChunk.TFChunk newChunk, string chunkExplanation) {
+		private bool ReplaceChunksWith(TFChunk.ITFChunk newChunk, string chunkExplanation) {
 			var chunkStartNumber = newChunk.ChunkHeader.ChunkStartNumber;
 			var chunkEndNumber = newChunk.ChunkHeader.ChunkEndNumber;
 			for (int i = chunkStartNumber; i <= chunkEndNumber;) {
@@ -237,7 +237,7 @@ namespace EventStore.Core.TransactionLog.Chunks {
 				}
 			}
 
-			TFChunk.TFChunk previousRemovedChunk = null;
+			TFChunk.ITFChunk previousRemovedChunk = null;
 			for (int i = chunkStartNumber; i <= chunkEndNumber; i += 1) {
 				var oldChunk = Interlocked.Exchange(ref _chunks[i], newChunk);
 				if (!ReferenceEquals(previousRemovedChunk, oldChunk)) {
@@ -263,7 +263,7 @@ namespace EventStore.Core.TransactionLog.Chunks {
 		}
 
 		private void RemoveChunks(int chunkStartNumber, int chunkEndNumber, string chunkExplanation) {
-			TFChunk.TFChunk lastRemovedChunk = null;
+			TFChunk.ITFChunk lastRemovedChunk = null;
 			for (int i = chunkStartNumber; i <= chunkEndNumber; i += 1) {
 				var oldChunk = Interlocked.Exchange(ref _chunks[i], null);
 				if (oldChunk != null && !ReferenceEquals(lastRemovedChunk, oldChunk)) {
@@ -275,7 +275,7 @@ namespace EventStore.Core.TransactionLog.Chunks {
 			}
 		}
 
-		private void TryCacheChunk(TFChunk.TFChunk chunk) {
+		private void TryCacheChunk(TFChunk.ITFChunk chunk) {
 			if (!_cachingEnabled)
 				return;
 
@@ -288,7 +288,7 @@ namespace EventStore.Core.TransactionLog.Chunks {
 				chunk.CacheInMemory();
 		}
 
-		public TFChunk.TFChunk GetChunkFor(long logPosition) {
+		public TFChunk.ITFChunk GetChunkFor(long logPosition) {
 			var chunkNum = (int)(logPosition / _config.ChunkSize);
 			if (chunkNum < 0 || chunkNum >= _chunksCount)
 				throw new ArgumentOutOfRangeException("logPosition",
@@ -301,7 +301,7 @@ namespace EventStore.Core.TransactionLog.Chunks {
 			return chunk;
 		}
 
-		public TFChunk.TFChunk GetChunk(int chunkNum) {
+		public TFChunk.ITFChunk GetChunk(int chunkNum) {
 			if (chunkNum < 0 || chunkNum >= _chunksCount)
 				throw new ArgumentOutOfRangeException("chunkNum",
 					string.Format("Chunk #{0} is not present in DB.", chunkNum));
@@ -313,7 +313,7 @@ namespace EventStore.Core.TransactionLog.Chunks {
 			return chunk;
 		}
 
-		public TFChunk.TFChunk GetChunkForOrDefault(string path) {
+		public TFChunk.ITFChunk GetChunkForOrDefault(string path) {
 			return _chunks != null ? _chunks.FirstOrDefault(c => c != null && c.FileName == path) : null;
 		}
 

@@ -65,7 +65,7 @@ namespace EventStore.Core.TransactionLog.Chunks {
 				Parallel.ForEach(GetAllLatestChunkVersions(checkpoint),
 					new ParallelOptions {MaxDegreeOfParallelism = threads},
 					chunkInfo => {
-						TFChunk.TFChunk chunk;
+						TFChunk.ITFChunk chunk;
 						if (lastChunkVersions.Length == 0 &&
 						    (chunkInfo.ChunkStartNumber + 1) * (long)Config.ChunkSize == checkpoint) {
 							// The situation where the logical data size is exactly divisible by ChunkSize,
